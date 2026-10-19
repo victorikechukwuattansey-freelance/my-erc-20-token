@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/MyToken.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MyTokenTest is Test {
     MyToken token;
@@ -87,5 +88,12 @@ contract MyTokenTest is Test {
             )
         );
         token.mint(user1, 1500 ether);
+    }
+
+    // Only the owner should be able to mint.
+    function test_RevertWhen_NonOwnerMints() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
+        token.mint(user1, 1 ether);
     }
 }

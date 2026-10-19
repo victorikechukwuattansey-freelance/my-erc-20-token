@@ -3,13 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MyToken is ERC20, ERC20Capped {
-    constructor(uint256 initialSupply, uint256 cap) ERC20("MyToken", "MTK") ERC20Capped(cap) {
+contract MyToken is ERC20, ERC20Capped, Ownable {
+    constructor(uint256 initialSupply, uint256 cap) ERC20("MyToken", "MTK") ERC20Capped(cap) Ownable(msg.sender) {
         _mint(msg.sender, initialSupply);
     }
 
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) external onlyOwner {
         _mint(to, amount);
     }
 

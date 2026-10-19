@@ -71,7 +71,7 @@ contract MyTokenTest is Test {
 
     // Happy path: minting up to the cap works
     function test_MintUpToCap() public {
-        token.mint(user1, 500 ether);                  // 1000 + 500 = 1500 < 2000
+        token.mint(user1, 500 ether); // 1000 + 500 = 1500 < 2000
         assertEq(token.balanceOf(user1), 500 ether);
         assertEq(token.totalSupply(), initialSupply + 500 ether);
     }
@@ -79,6 +79,6 @@ contract MyTokenTest is Test {
     // Cap invariant: minting past the cap reverts
     function test_RevertWhen_MintExceedsCap() public {
         vm.expectRevert();
-        token.mint(user1, 1500 ether);                 // 1000 + 1500 = 2500 > 2000
+        token.mint(user1, 1500 ether); // 1000 + 1500 = 2500 > 2000
     }
 }

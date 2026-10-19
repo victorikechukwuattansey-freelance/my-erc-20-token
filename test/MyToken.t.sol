@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/MyToken.sol";
+import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 
 contract MyTokenTest is Test {
     MyToken token;
@@ -69,16 +70,22 @@ contract MyTokenTest is Test {
         token.transferFrom(deployer, user2, 1 ether); // No allowance was set
     }
 
-    // Happy path: minting up to the cap works
+    // 8.  Happy path: minting up to the cap works
     function test_MintUpToCap() public {
         token.mint(user1, 500 ether); // 1000 + 500 = 1500 < 2000
         assertEq(token.balanceOf(user1), 500 ether);
         assertEq(token.totalSupply(), initialSupply + 500 ether);
     }
 
-    // Cap invariant: minting past the cap reverts
+    // 9. Cap invariant: minting past the cap reverts
     function test_RevertWhen_MintExceedsCap() public {
-        vm.expectRevert();
-        token.mint(user1, 1500 ether); // 1000 + 1500 = 2500 > 2000
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC20Capped.ERC20ExceededCap.selector,
+                initialSupply + 1500 ether, // attempted total
+                cap // cap
+            )
+        );
+        token.mint(user1, 1500 ether);
     }
 }

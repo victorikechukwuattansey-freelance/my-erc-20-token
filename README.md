@@ -53,10 +53,24 @@ MyToken._update → ERC20Capped._update (cap check) → ERC20._update (accountin
 | `test_RevertWhen_NonOwnerMints` | Only the owner can mint; non-owners revert with `OwnableUnauthorizedAccount` |
 | `test_BurnReducesSupplyAndBalance` | `burn` reduces both caller balance and `totalSupply` |
 | `test_RevertWhen_BurnExceedsBalance` | `burn` beyond balance reverts with `ERC20InsufficientBalance` |
+| `test_RevertWhen_TransferWhilePaused` | `transfer` reverts with `EnforcedPause` while paused |
+| `test_TransferAfterUnpause` | `unpause` restores transfers |
+| `test_RevertWhen_NonOwnerPauses` | Non-owners revert with `OwnableUnauthorizedAccount` on `pause` |
 
 The last test asserts the custom error selector and its arguments — the
 same `(2500e18, 2000e18)` values returned by a live `cast send` against
 a local Anvil node.
+
+## Override order
+
+Both `ERC20Capped` and `ERC20Pausable` override `_update`. The
+inheritance list `is ERC20, ERC20Capped, Ownable, ERC20Pausable`
+causes the runtime chain to be:
+
+paused check → cap check → accounting
+
+Pause first is intentional: a paused token should reject every
+balance change uniformly, not surface cap errors for a subset.
 
 ## Usage
 

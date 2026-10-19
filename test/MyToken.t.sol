@@ -4,6 +4,9 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/MyToken.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract MyTokenTest is Test {
     MyToken token;
@@ -87,5 +90,59 @@ contract MyTokenTest is Test {
             )
         );
         token.mint(user1, 1500 ether);
+    }
+
+    // Only the owner should be able to mint.
+    function test_RevertWhen_NonOwnerMints() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
+        token.mint(user1, 1 ether);
+    }
+
+    // Happy path: burning reduces both the caller's balance and total supply
+    function test_BurnReducesSupplyAndBalance() public {
+        uint256 supplyBefore = token.totalSupply();
+        uint256 balanceBefore = token.balanceOf(deployer);
+
+        token.burn(100 ether);
+
+        assertEq(token.totalSupply(), supplyBefore - 100 ether);
+        assertEq(token.balanceOf(deployer), balanceBefore - 100 ether);
+    }
+
+    // Invariant: you can't burn tokens you don't have
+    function test_RevertWhen_BurnExceedsBalance() public {
+        vm.prank(user1); // user1 has 0 MTK
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector,
+                user1,
+                0, // balance
+                1 ether // needed
+            )
+        );
+        token.burn(1 ether);
+    }
+
+    // When paused, transfers revert
+    function test_RevertWhen_TransferWhilePaused() public {
+        token.pause();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        token.transfer(user1, 1 ether);
+    }
+
+    // Unpausing restores transfers
+    function test_TransferAfterUnpause() public {
+        token.pause();
+        token.unpause();
+        token.transfer(user1, 1 ether);
+        assertEq(token.balanceOf(user1), 1 ether);
+    }
+
+    // Only the owner can pause
+    function test_RevertWhen_NonOwnerPauses() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
+        token.pause();
     }
 }

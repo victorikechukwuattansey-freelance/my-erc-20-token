@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "../src/MyToken.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract MyTokenTest is Test {
     MyToken token;
@@ -95,5 +96,30 @@ contract MyTokenTest is Test {
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
         token.mint(user1, 1 ether);
+    }
+
+    // Happy path: burning reduces both the caller's balance and total supply
+    function test_BurnReducesSupplyAndBalance() public {
+        uint256 supplyBefore = token.totalSupply();
+        uint256 balanceBefore = token.balanceOf(deployer);
+
+        token.burn(100 ether);
+
+        assertEq(token.totalSupply(), supplyBefore - 100 ether);
+        assertEq(token.balanceOf(deployer), balanceBefore - 100 ether);
+    }
+
+    // Invariant: you can't burn tokens you don't have
+    function test_RevertWhen_BurnExceedsBalance() public {
+        vm.prank(user1); // user1 has 0 MTK
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector,
+                user1,
+                0, // balance
+                1 ether // needed
+            )
+        );
+        token.burn(1 ether);
     }
 }

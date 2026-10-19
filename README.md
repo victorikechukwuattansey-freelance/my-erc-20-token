@@ -51,6 +51,8 @@ MyToken._update → ERC20Capped._update (cap check) → ERC20._update (accountin
 | `test_MintUpToCap` | Minting below the cap increases supply |
 | `test_RevertWhen_MintExceedsCap` | Minting above the cap reverts with the exact `ERC20ExceededCap(attempted, cap)` error |
 | `test_RevertWhen_NonOwnerMints` | Only the owner can mint; non-owners revert with `OwnableUnauthorizedAccount` |
+| `test_BurnReducesSupplyAndBalance` | `burn` reduces both caller balance and `totalSupply` |
+| `test_RevertWhen_BurnExceedsBalance` | `burn` beyond balance reverts with `ERC20InsufficientBalance` |
 
 The last test asserts the custom error selector and its arguments — the
 same `(2500e18, 2000e18)` values returned by a live `cast send` against

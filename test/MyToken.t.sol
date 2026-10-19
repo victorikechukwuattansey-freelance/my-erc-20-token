@@ -6,6 +6,7 @@ import "../src/MyToken.sol";
 import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract MyTokenTest is Test {
     MyToken token;
@@ -121,5 +122,27 @@ contract MyTokenTest is Test {
             )
         );
         token.burn(1 ether);
+    }
+
+    // When paused, transfers revert
+    function test_RevertWhen_TransferWhilePaused() public {
+        token.pause();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        token.transfer(user1, 1 ether);
+    }
+
+    // Unpausing restores transfers
+    function test_TransferAfterUnpause() public {
+        token.pause();
+        token.unpause();
+        token.transfer(user1, 1 ether);
+        assertEq(token.balanceOf(user1), 1 ether);
+    }
+
+    // Only the owner can pause
+    function test_RevertWhen_NonOwnerPauses() public {
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
+        token.pause();
     }
 }

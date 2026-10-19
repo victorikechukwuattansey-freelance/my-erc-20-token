@@ -10,12 +10,13 @@ contract MyTokenTest is Test {
     address user1;
     address user2;
     uint256 initialSupply = 1000 ether; // 1000 * 10^18
+    uint256 cap = 2000 ether;
 
     function setUp() public {
         deployer = address(this); // The test contract itself deploys
         user1 = makeAddr("user1");
         user2 = makeAddr("user2");
-        token = new MyToken(initialSupply);
+        token = new MyToken(initialSupply, cap);
     }
 
     // 1. Initial State
@@ -66,5 +67,18 @@ contract MyTokenTest is Test {
         vm.prank(user1);
         vm.expectRevert();
         token.transferFrom(deployer, user2, 1 ether); // No allowance was set
+    }
+
+    // Happy path: minting up to the cap works
+    function test_MintUpToCap() public {
+        token.mint(user1, 500 ether);                  // 1000 + 500 = 1500 < 2000 ✓
+        assertEq(token.balanceOf(user1), 500 ether);
+        assertEq(token.totalSupply(), initialSupply + 500 ether);
+    }
+
+    // Cap invariant: minting past the cap reverts
+    function test_RevertWhen_MintExceedsCap() public {
+        vm.expectRevert();
+        token.mint(user1, 1500 ether);                 // 1000 + 1500 = 2500 > 2000 ✗
     }
 }

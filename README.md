@@ -1,66 +1,34 @@
-## Foundry
+# MyToken (MTK)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A minimal ERC-20 token built with [Foundry](https://book.getfoundry.sh/)
+and [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts/).
 
-Foundry consists of:
+- **Name:** MyToken
+- **Symbol:** MTK
+- **Decimals:** 18
+- **Initial Supply:** 1000 MTK (minted to deployer)
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Design
 
-## Documentation
+Composition over reinvention: `MyToken` inherits the audited
+`ERC20` implementation from OpenZeppelin 5.x and adds only a
+constructor that mints the initial supply to `msg.sender`.
 
-https://book.getfoundry.sh/
+## Test coverage
+
+`test/MyToken.t.sol` proves the 7 core behaviours of the standard:
+
+1. Initial supply is minted to the deployer
+2. `transfer` moves tokens and updates balances
+3. `transfer` to the zero address reverts
+4. `transfer` with insufficient balance reverts
+5. `approve` sets an allowance
+6. `transferFrom` moves tokens and decrements the allowance
+7. `transferFrom` with insufficient allowance reverts
 
 ## Usage
 
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+```bash
+forge build      # compile
+forge test -vv   # run tests
+forge fmt --check # verify formatting (same as CI)

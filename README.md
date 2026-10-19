@@ -50,6 +50,7 @@ MyToken._update → ERC20Capped._update (cap check) → ERC20._update (accountin
 | `test_RevertWhen_InsufficientAllowance` | `transferFrom` with no allowance reverts |
 | `test_MintUpToCap` | Minting below the cap increases supply |
 | `test_RevertWhen_MintExceedsCap` | Minting above the cap reverts with the exact `ERC20ExceededCap(attempted, cap)` error |
+| `test_RevertWhen_NonOwnerMints` | Only the owner can mint; non-owners revert with `OwnableUnauthorizedAccount` |
 
 The last test asserts the custom error selector and its arguments — the
 same `(2500e18, 2000e18)` values returned by a live `cast send` against
@@ -96,8 +97,8 @@ The git log on this branch reads as the process narrative:
 
 ## Known limitations
 
-- `mint` is currently **unprotected** — any address can mint up to the
-  cap. Production use requires access control (`Ownable` or `AccessControl`).
+- `mint` is restricted to the owner (`Ownable`). Ownership is assigned to
+  the deployer at construction; transfer via `transferOwnership`.
 - No burn, no pause, no permit (EIP-2612).
 
 ## CI

@@ -7,6 +7,8 @@ import {ERC20Capped} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20C
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {SigUtils} from "./utils/SigUtils.sol"; // you'll create this helper
 
 contract MyTokenTest is Test {
     MyToken token;
@@ -144,5 +146,75 @@ contract MyTokenTest is Test {
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));
         token.pause();
+    }
+
+    // 1. Happy path: a valid signature sets the allowance
+    function test_PermitSetsAllowance() public {
+        uint256 privateKey = 0xA11CE;
+        address owner = vm.addr(privateKey);
+        uint256 value = 100 ether;
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 nonce = token.nonces(owner);
+
+        SigUtils sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
+        bytes32 digest = sigUtils.getDigest(owner, user1, value, nonce, deadline);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        token.permit(owner, user1, value, deadline, v, r, s);
+
+        assertEq(token.allowance(owner, user1), value);
+        assertEq(token.nonces(owner), nonce + 1);
+    }
+
+    // 2. Replay: the same signature must fail the second time (nonce changed)
+    function test_RevertWhen_PermitReplayed() public {
+        uint256 privateKey = 0xA11CE;
+        address owner = vm.addr(privateKey);
+        uint256 value = 100 ether;
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 nonce = token.nonces(owner);
+
+        SigUtils sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
+        bytes32 digest = sigUtils.getDigest(owner, user1, value, nonce, deadline);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+
+        token.permit(owner, user1, value, deadline, v, r, s);
+
+        vm.expectRevert(); // nonce mismatch: ERC20InvalidNonce
+        token.permit(owner, user1, value, deadline, v, r, s);
+    }
+
+    // 3. Deadline: an expired signature must fail
+    function test_RevertWhen_PermitExpired() public {
+        uint256 privateKey = 0xA11CE;
+        address owner = vm.addr(privateKey);
+        uint256 value = 100 ether;
+        uint256 deadline = block.timestamp - 1; // already expired
+        uint256 nonce = token.nonces(owner);
+
+        SigUtils sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
+        bytes32 digest = sigUtils.getDigest(owner, user1, value, nonce, deadline);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+
+        vm.expectRevert(); // ERC2612ExpiredSignature
+        token.permit(owner, user1, value, deadline, v, r, s);
+    }
+
+    // 4. Wrong signer: a signature from someone else must fail
+    function test_RevertWhen_PermitWrongSigner() public {
+        uint256 attackerKey = 0xBAD;
+        uint256 victimKey = 0xA11CE;
+        address victim = vm.addr(victimKey);
+        uint256 value = 100 ether;
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 nonce = token.nonces(victim);
+
+        SigUtils sigUtils = new SigUtils(token.DOMAIN_SEPARATOR());
+        // Attacker signs a permit for the victim's tokens
+        bytes32 digest = sigUtils.getDigest(victim, user1, value, nonce, deadline);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attackerKey, digest);
+
+        vm.expectRevert(); // ERC20InvalidSignature
+        token.permit(victim, user1, value, deadline, v, r, s);
     }
 }

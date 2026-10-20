@@ -91,7 +91,24 @@ by a live `cast send` against a local Anvil node.
 
 | Network | Address | Verified |
 | :--- | :--- | :--- |
-| Sepolia | _pending deployment_ | _pending_ |
+| Sepolia | `0xBdD7E89be61dA8fe4f66388fdd4dDFac77933d61` | [Etherscan](https://sepolia.etherscan.io/address/0xBdD7E89be61dA8fe4f66388fdd4dDFac77933d61) |
+
+### Deployment notes
+
+`forge create` undercounts gas for contract creation on Sepolia. The
+bytecode size (~12KB) requires roughly 20M gas to deploy; the default
+estimate is ~2.7M, and a 10M limit still hit `OutOfGas`. Use:
+
+    forge create src/MyToken.sol:MyToken \
+      --rpc-url sepolia \
+      --account deployer \
+      --broadcast \
+      --gas-limit 20000000 \
+      --constructor-args 1000000000000000000000 2000000000000000000000
+
+`forge script` fails on Sepolia for the same reason — its simulation
+reverts with `OutOfGas` before broadcasting, and `--gas-limit` does not
+override the simulated transaction's limit.
 
 ## Usage
 
